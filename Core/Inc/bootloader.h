@@ -12,10 +12,12 @@
 #include "string.h"
 #include "stdarg.h"
 #include "usart.h"
+#include "crc.h"
 
 /*---------------------- Section : Macro Declarations------------ */
 #define BL_DEBUG_UART                 &huart1
 #define BL_HOST_COMMUNICATION_UART    &huart1
+#define BL_CRC_ENABLE_OBJ             &hcrc
 
 #define BL_ENABLE_UART_DEBUG_MESSAGE 0x00
 #define BL_ENABLE_SPI_DEBUG_MESSAGE  0x01
@@ -37,6 +39,20 @@
 #define CBL_READ_SECTOR_STATUS_CMD    0x19
 #define CBL_OTP_READ_CMD              0x20
 #define CBL_DIS_R_W_PROTECT_CMD       0x21
+
+#define CBL_VENDOR_ID                 100
+#define CBL_SW_MAJOR_VERSION          1
+#define CBL_SW_MINOR_VERSION          0
+#define CBL_SW_PATCH_VERSION          0
+
+#define CRC_SIZE_BYTE                 4
+
+#define CRC_VERIFICATION_FAILED       0x00
+#define CRC_VERIFICATION_PASSED       0x01
+
+#define CBL_SEND_ACK                  0xCD
+#define CBL_SEND_NACK                 0xAB
+
 /*---------------------- Section : Macro Functions Declarations - */
 
 /*---------------------- Section : Data Type Declarations ------- */

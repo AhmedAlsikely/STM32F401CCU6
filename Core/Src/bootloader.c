@@ -21,6 +21,11 @@ static void Bootloader_Get_Sector_Protection_Status(uint8_t *Host_Buffer);
 static void Bootloader_Read_OTP(uint8_t *Host_Buffer);
 static void Bootloader_Disable_RW_Protection(uint8_t *Host_Buffer);
 
+static uint8_t Bootloader_CRC_Verify(uint8_t *pData, uint32_t Data_len, uint32_t Host_CRC);
+static void Bootloader_Send_ACK(uint8_t Replay_len);
+static void Bootloader_Send_NACK(void);
+static void Bootloader_Send_Data_To_Host(uint8_t *Host_Buffer, uint32_t Data_len);
+
 /*---------------------- Section : Global Variables Definitions ------- */
 static uint8_t BL_Host_Buffer[BL_HOST_BUFFER_RC_LENGTH];
 
@@ -132,8 +137,61 @@ BL_Status BL_UART_Featch_Host_Command(void){
 	return Status;
 }
 
-static void Bootloader_Get_Version(uint8_t *Host_Buffer){
+static uint8_t Bootloader_CRC_Verify(uint8_t *pData, uint32_t Data_len, uint32_t Host_CRC){
+	uint8_t CRC_Status = CRC_VERIFICATION_FAILED;
+	uint32_t MCU_CRC_Calculate = 0;
+	uint8_t Data_Counter = 0;
+	uint32_t Data_Buffer = 0;
 
+	for(Data_Counter = 0; Data_Counter < Data_len; Data_Counter++){
+		Data_Buffer = (uint32_t)pData[Data_Counter];
+		MCU_CRC_Calculate = HAL_CRC_Accumulate(BL_CRC_ENABLE_OBJ, &Data_Buffer, 1);
+	}
+
+	__HAL_CRC_DR_RESET(BL_CRC_ENABLE_OBJ);
+
+	if(MCU_CRC_Calculate == Host_CRC){
+		CRC_Status = CRC_VERIFICATION_PASSED;
+	}else{
+		CRC_Status = CRC_VERIFICATION_FAILED;
+	}
+
+	return CRC_Status;
+}
+
+static void Bootloader_Send_ACK(uint8_t Replay_len){
+	uint8_t ACK_Value[2]={0};
+	ACK_Value[0] = CBL_SEND_ACK;
+	ACK_Value[1] = Replay_len;
+	HAL_UART_Transmit(BL_HOST_COMMUNICATION_UART, (uint8_t *)ACK_Value, 2, HAL_MAX_DELAY);
+}
+
+static void Bootloader_Send_NACK(void){
+	uint8_t NACK_Value = CBL_SEND_NACK;
+	HAL_UART_Transmit(BL_HOST_COMMUNICATION_UART, &NACK_Value, 1, HAL_MAX_DELAY);
+}
+
+static void Bootloader_Send_Data_To_Host(uint8_t *Host_Buffer, uint32_t Data_len){
+	HAL_UART_Transmit(BL_HOST_COMMUNICATION_UART, (uint8_t *)Host_Buffer, Data_len, HAL_MAX_DELAY);
+}
+
+static void Bootloader_Get_Version(uint8_t *Host_Buffer){
+	uint8_t BL_Version[4] = {CBL_VENDOR_ID, CBL_SW_MAJOR_VERSION, CBL_SW_MINOR_VERSION, CBL_SW_PATCH_VERSION};
+	uint16_t Host_CMD_Packet_Len = 0;
+	uint32_t Host_CRC32 = 0;
+	uint8_t CRC_Verify  = 0;
+
+	/* Extract the CRC32 and Packet length send by the Host */
+	Host_CMD_Packet_Len = Host_Buffer[0]+1;
+	Host_CRC32 =  *((uint32_t *)((Host_Buffer + Host_CMD_Packet_Len) - CRC_SIZE_BYTE));
+
+	CRC_Verify = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0], Host_CMD_Packet_Len - CRC_SIZE_BYTE, Host_CRC32);
+	if(CRC_VERIFICATION_PASSED == CRC_Verify){
+		Bootloader_Send_ACK(4);
+		Bootloader_Send_Data_To_Host((uint8_t *)BL_Version, 4);
+	}else{
+		Bootloader_Send_NACK();
+	}
 }
 static void Bootloader_Get_Help(uint8_t *Host_Buffer){
 
