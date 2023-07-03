@@ -1,0 +1,14 @@
+../Core/Src/bootloader.c:30:11:BL_UART_Featch_Host_Command	16	static
+../Core/Src/bootloader.c:135:13:Bootloader_Get_Version	16	static
+../Core/Src/bootloader.c:138:13:Bootloader_Get_Help	16	static
+../Core/Src/bootloader.c:141:13:Bootloader_Get_Chip_Identification_Number	16	static
+../Core/Src/bootloader.c:144:13:Bootloader_Read_Protection_Level	16	static
+../Core/Src/bootloader.c:147:13:Bootloader_Jump_To_Address	16	static
+../Core/Src/bootloader.c:150:13:Bootloader_Erase_Flash	16	static
+../Core/Src/bootloader.c:153:13:Bootloader_Memory_Write	16	static
+../Core/Src/bootloader.c:156:13:Bootloader_Enable_RW_Protection	16	static
+../Core/Src/bootloader.c:159:13:Bootloader_Memory_Read	16	static
+../Core/Src/bootloader.c:162:13:Bootloader_Get_Sector_Protection_Status	16	static
+../Core/Src/bootloader.c:165:13:Bootloader_Read_OTP	16	static
+../Core/Src/bootloader.c:168:13:Bootloader_Disable_RW_Protection	16	static
+../Core/Src/bootloader.c:172:6:BL_print_message	112	static
