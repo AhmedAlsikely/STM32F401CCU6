@@ -57,6 +57,17 @@
 #define CBL_SEND_ACK                  0xCD
 #define CBL_SEND_NACK                 0xAB
 
+/* Start address of sector 2 */
+#define FLASH_SECTOR2_BASE_ADDRESS    0x0800C000
+
+#define ADDRESS_IS_INVALID            0x00
+#define ADDRESS_IS_VALID              0x01
+
+#define STM32F401_FLASH_SIZE 		  (256 * 1024)
+#define STM32F401_SRAM1_SIZE 		  (64  * 1024)
+#define STM32F401_FLASH_END		      (FLASH_BASE + STM32F401_FLASH_SIZE)
+#define STM32F401_SRAM1_END		      (SRAM1_BASE + STM32F401_SRAM1_SIZE)
+
 /*---------------------- Section : Macro Functions Declarations - */
 
 /*---------------------- Section : Data Type Declarations ------- */
@@ -65,6 +76,8 @@ typedef enum{
 	BL_OK
 }BL_Status;
 
+typedef void (*pMainApp)(void);
+typedef void (*Jump_ptr)(void);
 /*---------------------- Section : Functions Declarations ------- */
 void BL_print_message(char *format, ... );
 BL_Status BL_UART_Featch_Host_Command(void);
