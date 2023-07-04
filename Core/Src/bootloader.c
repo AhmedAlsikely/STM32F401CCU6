@@ -80,7 +80,7 @@ BL_Status BL_UART_Featch_Host_Command(void){
 					break;
 				case CBL_GET_CID_CMD:
 
-					BL_print_message("Read the MCU chip identification number \r\n");
+					//BL_print_message("Read the MCU chip identification number \r\n");
 					Bootloader_Get_Chip_Identification_Number(BL_Host_Buffer);
 					Status = BL_OK;
 					break;
@@ -243,10 +243,40 @@ static void Bootloader_Get_Help(uint8_t *Host_Buffer){
 	BL_print_message("CRC Verification failed \r\n");
 #endif
 	}
-
 }
-static void Bootloader_Get_Chip_Identification_Number(uint8_t *Host_Buffer){
 
+
+
+static void Bootloader_Get_Chip_Identification_Number(uint8_t *Host_Buffer){
+	uint16_t Host_CMD_Packet_Len = 0;
+	uint32_t Host_CRC32 = 0;
+	uint8_t CRC_Verify  = 0;
+	uint16_t ID_Code = 0;
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("Read the MCU chip identification number \r\n");
+#endif
+
+	/* Extract the CRC32 and Packet length send by the Host */
+	Host_CMD_Packet_Len = Host_Buffer[0]+1;
+	Host_CRC32 =  *((uint32_t *)((Host_Buffer + Host_CMD_Packet_Len) - CRC_SIZE_BYTE));
+
+	/*CRC Verification*/
+	CRC_Verify = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0], Host_CMD_Packet_Len - CRC_SIZE_BYTE, Host_CRC32);
+	if(CRC_VERIFICATION_PASSED == CRC_Verify){
+		/* Get chip identification number */
+		ID_Code = (uint16_t)((*((uint32_t *)0xE0042000)) & 0x00000FFF);
+		/* Report chip identification number to Host*/
+		Bootloader_Send_ACK(2);
+		Bootloader_Send_Data_To_Host((uint8_t *)&ID_Code,2);
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("CRC Verification Successful \r\n");
+#endif
+	}else{
+		Bootloader_Send_NACK();
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("CRC Verification failed \r\n");
+#endif
+	}
 }
 static void Bootloader_Read_Protection_Level(uint8_t *Host_Buffer){
 
