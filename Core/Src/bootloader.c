@@ -28,7 +28,20 @@ static void Bootloader_Send_Data_To_Host(uint8_t *Host_Buffer, uint32_t Data_len
 
 /*---------------------- Section : Global Variables Definitions ------- */
 static uint8_t BL_Host_Buffer[BL_HOST_BUFFER_RC_LENGTH];
-
+static uint8_t Bootloader_Support_CMDs[12] = {
+		CBL_GET_VER_CMD  ,
+		CBL_GET_HELP_CMD ,
+		CBL_GET_CID_CMD    ,
+		CBL_GET_RDP_STATUS_CMD ,
+		CBL_GO_TO_ADDR_CMD ,
+		CBL_FLASH_ERASE_CMD  ,
+		CBL_MEM_WRITE_CMD,
+		CBL_EN_R_W_PROTECT_CMD,
+		CBL_MEM_READ_CMD ,
+		CBL_READ_SECTOR_STATUS_CMD ,
+		CBL_OTP_READ_CMD,
+		CBL_DIS_R_W_PROTECT_CMD
+};
 
 /*---------------------- Section : Functions Definitions ------- */
 
@@ -57,12 +70,11 @@ BL_Status BL_UART_Featch_Host_Command(void){
 			switch(BL_Host_Buffer[1])
 			{
 				case CBL_GET_VER_CMD:
-					BL_print_message("Read the bootloader version from the MCU \r\n");
 					Bootloader_Get_Version(BL_Host_Buffer);
 					Status = BL_OK;
 					break;
 				case CBL_GET_HELP_CMD:
-					BL_print_message("Read the commands supported by the bootloader \r\n");
+					//BL_print_message("Read the commands supported by the bootloader \r\n");
 					Bootloader_Get_Help(BL_Host_Buffer);
 					Status = BL_OK;
 					break;
@@ -181,19 +193,56 @@ static void Bootloader_Get_Version(uint8_t *Host_Buffer){
 	uint32_t Host_CRC32 = 0;
 	uint8_t CRC_Verify  = 0;
 
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("Read the bootloader version from the MCU \r\n");
+#endif
 	/* Extract the CRC32 and Packet length send by the Host */
 	Host_CMD_Packet_Len = Host_Buffer[0]+1;
 	Host_CRC32 =  *((uint32_t *)((Host_Buffer + Host_CMD_Packet_Len) - CRC_SIZE_BYTE));
 
+	/*CRC Verification*/
 	CRC_Verify = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0], Host_CMD_Packet_Len - CRC_SIZE_BYTE, Host_CRC32);
 	if(CRC_VERIFICATION_PASSED == CRC_Verify){
 		Bootloader_Send_ACK(4);
 		Bootloader_Send_Data_To_Host((uint8_t *)BL_Version, 4);
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("CRC Verification Successful \r\n");
+#endif
 	}else{
 		Bootloader_Send_NACK();
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("CRC Verification failed \r\n");
+#endif
 	}
 }
+
+
 static void Bootloader_Get_Help(uint8_t *Host_Buffer){
+	uint16_t Host_CMD_Packet_Len = 0;
+	uint32_t Host_CRC32 = 0;
+	uint8_t CRC_Verify  = 0;
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("Read the commands supported by the bootloader \r\n");
+#endif
+
+	/* Extract the CRC32 and Packet length send by the Host */
+	Host_CMD_Packet_Len = Host_Buffer[0]+1;
+	Host_CRC32 =  *((uint32_t *)((Host_Buffer + Host_CMD_Packet_Len) - CRC_SIZE_BYTE));
+
+	/*CRC Verification*/
+	CRC_Verify = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0], Host_CMD_Packet_Len - CRC_SIZE_BYTE, Host_CRC32);
+	if(CRC_VERIFICATION_PASSED == CRC_Verify){
+		Bootloader_Send_ACK(12);
+		Bootloader_Send_Data_To_Host((uint8_t *)Bootloader_Support_CMDs, 12);
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("CRC Verification Successful \r\n");
+#endif
+	}else{
+		Bootloader_Send_NACK();
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("CRC Verification failed \r\n");
+#endif
+	}
 
 }
 static void Bootloader_Get_Chip_Identification_Number(uint8_t *Host_Buffer){

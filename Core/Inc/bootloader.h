@@ -16,12 +16,16 @@
 
 /*---------------------- Section : Macro Declarations------------ */
 #define BL_DEBUG_UART                 &huart1
-#define BL_HOST_COMMUNICATION_UART    &huart1
+#define BL_HOST_COMMUNICATION_UART    &huart2
 #define BL_CRC_ENABLE_OBJ             &hcrc
 
-#define BL_ENABLE_UART_DEBUG_MESSAGE 0x00
-#define BL_ENABLE_SPI_DEBUG_MESSAGE  0x01
-#define BL_ENABLE_I2C_DEBUG_MESSAGE  0x02
+#define DEBUG_INFO_DISABLE            0x00
+#define DEBUG_INFO_ENABLE             0x01
+#define BL_DEBUG_ENABLE               DEBUG_INFO_ENABLE
+
+#define BL_ENABLE_UART_DEBUG_MESSAGE  0x00
+#define BL_ENABLE_SPI_DEBUG_MESSAGE   0x01
+#define BL_ENABLE_I2C_DEBUG_MESSAGE   0x02
 
 #define BL_DEBUG_METHOD BL_ENABLE_UART_DEBUG_MESSAGE
 
@@ -42,8 +46,8 @@
 
 #define CBL_VENDOR_ID                 100
 #define CBL_SW_MAJOR_VERSION          1
-#define CBL_SW_MINOR_VERSION          0
-#define CBL_SW_PATCH_VERSION          0
+#define CBL_SW_MINOR_VERSION          5
+#define CBL_SW_PATCH_VERSION          3
 
 #define CRC_SIZE_BYTE                 4
 

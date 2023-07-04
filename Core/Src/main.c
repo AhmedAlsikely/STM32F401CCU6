@@ -96,7 +96,10 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
-  BL_print_message("Bootloder started !! \r\n");
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("Bootloder started !! \r\n");
+#endif
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
