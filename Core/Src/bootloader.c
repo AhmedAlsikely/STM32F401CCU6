@@ -8,6 +8,7 @@
 /*---------------------- Section : Includes --------------------- */
 #include "bootloader.h"
 /*---------------------- Section : Function Declarations------------ */
+void BL_print_message(char *format, ... );
 static void Bootloader_Get_Version(uint8_t *Host_Buffer);
 static void Bootloader_Get_Help(uint8_t *Host_Buffer);
 static void Bootloader_Get_Chip_Identification_Number(uint8_t *Host_Buffer);
@@ -460,7 +461,7 @@ static void Bootloader_Erase_Flash(uint8_t *Host_Buffer){
 		BL_print_message("CRC Verification Successful \r\n");
 #endif
 		Bootloader_Send_ACK(1);
-		Sector_Erase_Status = perform_Flash_Erase((uint8_t)Host_Buffer[2],(uint8_t)Host_Buffer[3]);
+		Sector_Erase_Status = perform_Flash_Erase(Host_Buffer[2],Host_Buffer[3]);
 		if(SECTOR_ERASE_SUCCESS == Sector_Erase_Status)
 		{
 #if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
@@ -541,8 +542,77 @@ static void Bootloader_Disable_RW_Protection(uint8_t *Host_Buffer){
 
 }
 
+static uint8_t perform_Flash_Erase(uint8_t sector_Number, uint8_t numberOf_Sectors){
+	uint8_t Sector_Validity_Status = INVAlID_SECTOR_NUMBER;
+	uint8_t Remaining_Sectors = 0;
+	uint32_t SectorError = 0;
+	FLASH_EraseInitTypeDef pEraseInit;
+	HAL_StatusTypeDef HAL_Status = HAL_ERROR;
+	if(numberOf_Sectors > CBL_FLASH_MAX_SECTOR_NUMBER)
+	{
+		Sector_Validity_Status = INVAlID_SECTOR_NUMBER ;
+	}
+	else
+	{
+		if((sector_Number <= (CBL_FLASH_MAX_SECTOR_NUMBER - 1)) || (CBL_FLASH_MASS_ERASE == sector_Number))
+		{
+			if(CBL_FLASH_MASS_ERASE == sector_Number)
+			{
+				pEraseInit.TypeErase = FLASH_TYPEERASE_MASSERASE;
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+			BL_print_message("CBL_FLASH_MASS_ERASE ----------------------------- \r\n");
+#endif
+			}
+			else
+			{
+				/* User needs Sector erase */
+
+				Remaining_Sectors = CBL_FLASH_MAX_SECTOR_NUMBER - sector_Number;
+				if(numberOf_Sectors > Remaining_Sectors)
+				{
+					numberOf_Sectors = Remaining_Sectors;
+				}
+				else{/* NoThing */}
+
+
+				pEraseInit.TypeErase = FLASH_TYPEERASE_SECTORS;
+				pEraseInit.Sector = sector_Number;            /* Initial FLASH sector to erase when Mass erase is disabled */
+				pEraseInit.NbSectors = numberOf_Sectors;      /* Number of sectors to be erased. */
+			}
+			pEraseInit.Banks = FLASH_BANK_1;              /* Bank 1 */
+			pEraseInit.VoltageRange = FLASH_VOLTAGE_RANGE_3;
+
+			/* Unlock the FLASH Option Control Registers access.*/
+			HAL_Status = HAL_FLASH_Unlock();
+			/* Perform a mass erase or erase the specified FLASH memory sectors */
+			HAL_Status = HAL_FLASHEx_Erase(&pEraseInit, &SectorError);
+
+			if(FALSH_SUCCESSFUL_ERASE == SectorError)
+			{
+				Sector_Validity_Status = SECTOR_ERASE_SUCCESS;
+			}
+			else
+			{
+				Sector_Validity_Status = SECTOR_ERASE_FAILED;
+			}
+			/* Lock the FLASH Option Control Registers access.*/
+			HAL_Status = HAL_FLASH_Lock();
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+			BL_print_message("HAL_Status = HAL_FLASHEx_Erase ===== 0x%x \r\n",HAL_Status);
+#endif
+
+		}
+		else
+		{
+			Sector_Validity_Status = INVAlID_SECTOR_NUMBER ;
+		}
+
+	}
+	return Sector_Validity_Status;
+}
+
 /**
- * 
+ *
  * @param format
  * @param ...
  */
@@ -565,67 +635,6 @@ void BL_print_message(char *format, ... ){
 	va_end(args);
 }
 
-static uint8_t perform_Flash_Erase(uint8_t sector_Number, uint8_t numberOf_Sectors){
-	uint8_t Sector_Validity_Status = INVAlID_SECTOR_NUMBER;
-	uint8_t Remaining_Sectors = 0;
-	uint32_t SectorError = 0;
-	FLASH_EraseInitTypeDef pEraseInit;
-	HAL_StatusTypeDef HAL_Status = HAL_ERROR;
-	if(numberOf_Sectors > CBL_FLASH_MAX_SECTOR_NUMBER)
-	{
-		Sector_Validity_Status = INVAlID_SECTOR_NUMBER ;
-	}
-	else
-	{
-		if((sector_Number <= (CBL_FLASH_MAX_SECTOR_NUMBER - 1)) || (CBL_FLASH_MASS_ERASE == sector_Number))
-		{
-			if(CBL_FLASH_MASS_ERASE == sector_Number)
-			{
-				pEraseInit.TypeErase = FLASH_TYPEERASE_MASSERASE;
-
-			}
-			else
-			{
-				Remaining_Sectors = CBL_FLASH_MAX_SECTOR_NUMBER - sector_Number;
-				if(numberOf_Sectors > Remaining_Sectors)
-				{
-					numberOf_Sectors = Remaining_Sectors;
-				}
-				else{/* NoThing */}
-
-
-				pEraseInit.TypeErase = FLASH_TYPEERASE_SECTORS;
-				pEraseInit.Sector = sector_Number;            /* Initial FLASH sector to erase when Mass erase is disabled */
-				pEraseInit.NbSectors = numberOf_Sectors;      /* Number of sectors to be erased. */
-			}
-			pEraseInit.Banks = FLASH_BANK_1;              /* Bank 1 */
-			pEraseInit.VoltageRange = FLASH_VOLTAGE_RANGE_3;
-
-			/* Unlock the FLASH Option Control Registers access.*/
-			HAL_FLASH_OB_Unlock();
-			/* Perform a mass erase or erase the specified FLASH memory sectors */
-			HAL_Status = HAL_FLASHEx_Erase(&pEraseInit, &SectorError);
-			/* Lock the FLASH Option Control Registers access.*/
-			HAL_FLASH_OB_Lock();
-			if(FALSH_SUCCESSFUL_ERASE == SectorError)
-			{
-				Sector_Validity_Status = SECTOR_ERASE_SUCCESS;
-			}
-			else
-			{
-				Sector_Validity_Status = SECTOR_ERASE_FAILED;
-			}
-
-
-		}
-		else
-		{
-			Sector_Validity_Status = INVAlID_SECTOR_NUMBER ;
-		}
-
-	}
-	return Sector_Validity_Status;
-}
 
 
 
