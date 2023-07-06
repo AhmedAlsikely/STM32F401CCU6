@@ -29,6 +29,8 @@ static void Bootloader_Send_Data_To_Host(uint8_t *Host_Buffer, uint32_t Data_len
 static void Bootloader_Jump_to_user_app(void);
 static uint8_t Host_Jump_Address_Verification(uint32_t Jump_Address);
 
+static uint8_t perform_Flash_Erase(uint8_t sector_Number, uint8_t numberOf_Sectors);
+
 
 /*---------------------- Section : Global Variables Definitions ------- */
 static uint8_t BL_Host_Buffer[BL_HOST_BUFFER_RC_LENGTH];
@@ -105,7 +107,7 @@ BL_Status BL_UART_Featch_Host_Command(void){
 					break;
 				case CBL_FLASH_ERASE_CMD:
 
-					BL_print_message("Mass erase or sector erase of the user flash \r\n");
+					//BL_print_message("Mass erase or sector erase of the user flash \r\n");
 					Bootloader_Erase_Flash(BL_Host_Buffer);
 					Status = BL_OK;
 					break;
@@ -283,7 +285,6 @@ static void Bootloader_Get_Version(uint8_t *Host_Buffer){
 #if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
 	BL_print_message("CRC Verification Successful \r\n");
 #endif
-	Bootloader_Jump_to_user_app();
 	}else{
 		Bootloader_Send_NACK();
 #if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
@@ -440,6 +441,49 @@ static void Bootloader_Jump_To_Address(uint8_t *Host_Buffer){
  * @param Host_Buffer
  */
 static void Bootloader_Erase_Flash(uint8_t *Host_Buffer){
+	uint16_t Host_CMD_Packet_Len = 0;
+	uint32_t Host_CRC32 = 0;
+	uint8_t CRC_Verify  = 0;
+	uint8_t Sector_Erase_Status = 0;
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("Mass erase or sector erase of the user flash \r\n");
+#endif
+
+	/* Extract the CRC32 and Packet length send by the Host */
+	Host_CMD_Packet_Len = Host_Buffer[0]+1;
+	Host_CRC32 =  *((uint32_t *)((Host_Buffer + Host_CMD_Packet_Len) - CRC_SIZE_BYTE));
+
+	/*CRC Verification*/
+	CRC_Verify = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0], Host_CMD_Packet_Len - CRC_SIZE_BYTE, Host_CRC32);
+	if(CRC_VERIFICATION_PASSED == CRC_Verify){
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+		BL_print_message("CRC Verification Successful \r\n");
+#endif
+		Bootloader_Send_ACK(1);
+		Sector_Erase_Status = perform_Flash_Erase((uint8_t)Host_Buffer[2],(uint8_t)Host_Buffer[3]);
+		if(SECTOR_ERASE_SUCCESS == Sector_Erase_Status)
+		{
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+			BL_print_message("Sector Erase Successful \r\n");
+#endif
+			Bootloader_Send_Data_To_Host((uint8_t *)&Sector_Erase_Status,1);
+		}
+		else
+		{
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+			BL_print_message("Sector Erase Failed \r\n");
+#endif
+			Bootloader_Send_Data_To_Host((uint8_t *)&Sector_Erase_Status,1);
+		}
+
+
+
+	}else{
+		Bootloader_Send_NACK();
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+		BL_print_message("CRC Verification failed \r\n");
+#endif
+	}
 
 }
 
@@ -513,6 +557,10 @@ void BL_print_message(char *format, ... ){
 
 #endif
 	va_end(args);
+}
+
+static uint8_t perform_Flash_Erase(uint8_t sector_Number, uint8_t numberOf_Sectors){
+
 }
 
 
