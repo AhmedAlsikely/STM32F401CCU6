@@ -77,6 +77,7 @@
 #define INVAlID_SECTOR_NUMBER         0x02
 #define VAlID_SECTOR_NUMBER           0x03
 
+#define FALSH_SUCCESSFUL_ERASE 		  0xFFFFFFFFU
 /*---------------------- Section : Macro Functions Declarations - */
 
 /*---------------------- Section : Data Type Declarations ------- */
