@@ -14,6 +14,7 @@
 #include "usart.h"
 #include "crc.h"
 
+
 /*---------------------- Section : Macro Declarations------------ */
 #define BL_DEBUG_UART                 &huart1
 #define BL_HOST_COMMUNICATION_UART    &huart2
@@ -73,6 +74,8 @@
 
 #define SECTOR_ERASE_FAILED           0x00
 #define SECTOR_ERASE_SUCCESS          0x01
+#define INVAlID_SECTOR_NUMBER         0x02
+#define VAlID_SECTOR_NUMBER           0x03
 
 /*---------------------- Section : Macro Functions Declarations - */
 
