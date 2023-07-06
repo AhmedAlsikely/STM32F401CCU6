@@ -72,10 +72,11 @@
 #define CBL_FLASH_MAX_SECTOR_NUMBER   0x08
 #define CBL_FLASH_MASS_ERASE          0xFF
 
-#define SECTOR_ERASE_FAILED           0x00
-#define SECTOR_ERASE_SUCCESS          0x01
-#define INVAlID_SECTOR_NUMBER         0x02
-#define VAlID_SECTOR_NUMBER           0x03
+#define INVAlID_SECTOR_NUMBER         0x00
+#define VAlID_SECTOR_NUMBER           0x01
+#define SECTOR_ERASE_FAILED           0x02
+#define SECTOR_ERASE_SUCCESS          0x03
+
 
 #define FALSH_SUCCESSFUL_ERASE 		  0xFFFFFFFFU
 /*---------------------- Section : Macro Functions Declarations - */
