@@ -444,7 +444,7 @@ static void Bootloader_Erase_Flash(uint8_t *Host_Buffer){
 	uint16_t Host_CMD_Packet_Len = 0;
 	uint32_t Host_CRC32 = 0;
 	uint8_t CRC_Verify  = 0;
-	uint8_t Sector_Erase_Status = 0;
+	uint8_t Sector_Erase_Status = SECTOR_ERASE_FAILED;
 #if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
 	BL_print_message("Mass erase or sector erase of the user flash \r\n");
 #endif
@@ -560,7 +560,26 @@ void BL_print_message(char *format, ... ){
 }
 
 static uint8_t perform_Flash_Erase(uint8_t sector_Number, uint8_t numberOf_Sectors){
+	uint8_t Sector_Erase_Status = SECTOR_ERASE_FAILED;
 
+	if(numberOf_Sectors > CBL_FLASH_MAX_SECTOR_NUMBER)
+	{
+		Sector_Erase_Status = SECTOR_ERASE_FAILED ;
+	}
+	else
+	{
+		if((sector_Number <= (CBL_FLASH_MAX_SECTOR_NUMBER - 1)) || (CBL_FLASH_MASS_ERASE == sector_Number))
+		{
+
+			Sector_Erase_Status = SECTOR_ERASE_SUCCESS ;
+		}
+		else
+		{
+			Sector_Erase_Status = SECTOR_ERASE_FAILED ;
+		}
+
+	}
+	return Sector_Erase_Status;
 }
 
 

@@ -68,6 +68,12 @@
 #define STM32F401_FLASH_END		      (FLASH_BASE + STM32F401_FLASH_SIZE)
 #define STM32F401_SRAM1_END		      (SRAM1_BASE + STM32F401_SRAM1_SIZE)
 
+#define CBL_FLASH_MAX_SECTOR_NUMBER   0x08
+#define CBL_FLASH_MASS_ERASE          0xFF
+
+#define SECTOR_ERASE_FAILED           0x00
+#define SECTOR_ERASE_SUCCESS          0x01
+
 /*---------------------- Section : Macro Functions Declarations - */
 
 /*---------------------- Section : Data Type Declarations ------- */
