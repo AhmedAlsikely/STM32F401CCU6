@@ -52,6 +52,12 @@ default.size.stdout \
 OBJDUMP_LIST += \
 f401ccu6.list \
 
+OBJCOPY_HEX += \
+f401ccu6.hex \
+
+OBJCOPY_BIN += \
+f401ccu6.bin \
+
 
 # All Target
 all: main-build
@@ -75,12 +81,22 @@ f401ccu6.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
+f401ccu6.hex: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O ihex $(EXECUTABLES) "f401ccu6.hex"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+f401ccu6.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "f401ccu6.bin"
+	@echo 'Finished building: $@'
+	@echo ' '
+
 # Other Targets
 clean:
-	-$(RM) default.size.stdout f401ccu6.elf f401ccu6.list f401ccu6.map
+	-$(RM) default.size.stdout f401ccu6.bin f401ccu6.elf f401ccu6.hex f401ccu6.list f401ccu6.map
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_HEX) $(OBJCOPY_BIN)
 
 fail-specified-linker-script-missing:
 	@echo 'Error: Cannot find the specified linker script. Check the linker settings in the build configuration.'

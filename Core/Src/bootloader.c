@@ -28,11 +28,12 @@ static void Bootloader_Send_NACK(void);
 static void Bootloader_Send_Data_To_Host(uint8_t *Host_Buffer, uint32_t Data_len);
 
 static void Bootloader_Jump_to_user_app(void);
-static uint8_t Host_Jump_Address_Verification(uint32_t Jump_Address);
+static uint8_t Host_Address_Verification(uint32_t Jump_Address);
 
 static uint8_t perform_Flash_Erase(uint8_t sector_Number, uint8_t numberOf_Sectors);
+static uint8_t Flash_Memory_Write_Payload(uint8_t *Host_Payload, uint32_t payload_Start_Address, uint32_t payload_Len);
 
-
+static uint8_t CBL_STM32F401_Get_RDP_Level(void);
 /*---------------------- Section : Global Variables Definitions ------- */
 static uint8_t BL_Host_Buffer[BL_HOST_BUFFER_RC_LENGTH];
 static uint8_t Bootloader_Support_CMDs[12] = {
@@ -96,7 +97,7 @@ BL_Status BL_UART_Featch_Host_Command(void){
 					break;
 				case CBL_GET_RDP_STATUS_CMD:
 
-					BL_print_message("Read the FLASH Read Protection level \r\n");
+					//BL_print_message("Read the FLASH Read Protection level \r\n");
 					Bootloader_Read_Protection_Level(BL_Host_Buffer);
 					Status = BL_OK;
 					break;
@@ -114,7 +115,7 @@ BL_Status BL_UART_Featch_Host_Command(void){
 					break;
 				case CBL_MEM_WRITE_CMD:
 
-					BL_print_message("Write data into different memories of the MCU \r\n");
+					//BL_print_message("Write data into different memories of the MCU \r\n");
 					Bootloader_Memory_Write(BL_Host_Buffer);
 					Status = BL_OK;
 					break;
@@ -190,7 +191,7 @@ static void Bootloader_Jump_to_user_app(void){
  * @param Jump_Address
  * @return 
  */
-static uint8_t Host_Jump_Address_Verification(uint32_t Jump_Address){
+static uint8_t Host_Address_Verification(uint32_t Jump_Address){
 	uint8_t Address_Verification = ADDRESS_IS_INVALID;
 	if((Jump_Address >= FLASH_BASE) && (Jump_Address <= STM32F401_FLASH_END)){
 		Address_Verification = ADDRESS_IS_VALID;
@@ -269,6 +270,7 @@ static void Bootloader_Get_Version(uint8_t *Host_Buffer){
 	uint32_t Host_CRC32 = 0;
 	uint8_t CRC_Verify  = 0;
 
+	Bootloader_Jump_to_user_app();
 #if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
 	BL_print_message("Read the bootloader version from the MCU \r\n");
 #endif
@@ -368,7 +370,36 @@ static void Bootloader_Get_Chip_Identification_Number(uint8_t *Host_Buffer){
  * @param Host_Buffer
  */
 static void Bootloader_Read_Protection_Level(uint8_t *Host_Buffer){
+	uint16_t Host_CMD_Packet_Len = 0;
+	uint32_t Host_CRC32 = 0;
+	uint8_t CRC_Verify  = 0;
+	uint8_t RDP_level = 0;
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("Read the FLASH Read Protection level \r\n");
+#endif
 
+	/* Extract the CRC32 and Packet length send by the Host */
+	Host_CMD_Packet_Len = Host_Buffer[0]+1;
+	Host_CRC32 =  *((uint32_t *)((Host_Buffer + Host_CMD_Packet_Len) - CRC_SIZE_BYTE));
+
+	/*CRC Verification*/
+	CRC_Verify = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0], Host_CMD_Packet_Len - CRC_SIZE_BYTE, Host_CRC32);
+	if(CRC_VERIFICATION_PASSED == CRC_Verify){
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("CRC Verification Successful \r\n");
+#endif
+
+		/* Get chip identification number */
+		RDP_level = CBL_STM32F401_Get_RDP_Level();
+		/* Report chip identification number to Host*/
+		Bootloader_Send_ACK(1);
+		Bootloader_Send_Data_To_Host((uint8_t *)&RDP_level,1);
+	}else{
+		Bootloader_Send_NACK();
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("CRC Verification failed \r\n");
+#endif
+	}
 }
 
 /**
@@ -403,7 +434,7 @@ static void Bootloader_Jump_To_Address(uint8_t *Host_Buffer){
 		/* Extract the address from the HOST Packet */
 		Host_Jumb_Address = *((uint32_t *)&Host_Buffer[2]);
 
-		Address_Verification = Host_Jump_Address_Verification(Host_Jumb_Address);
+		Address_Verification = Host_Address_Verification(Host_Jumb_Address);
 		if(ADDRESS_IS_VALID == Address_Verification)
 		{
 #if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
@@ -499,7 +530,77 @@ static void Bootloader_Erase_Flash(uint8_t *Host_Buffer){
  * @param Host_Buffer
  */
 static void Bootloader_Memory_Write(uint8_t *Host_Buffer){
+	uint16_t Host_CMD_Packet_Len = 0;
+	uint32_t Host_CRC32 = 0;
+	uint8_t CRC_Verify  = 0;
+	uint32_t Host_Address = 0;
+	uint8_t Pyload_Len  = 0;
+	uint8_t Address_Verification = ADDRESS_IS_INVALID;
+	uint8_t Flash_Payload_Write_Status = FLASH_PAYLOAD_WRITE_FAILED;
 
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("Write data into different memories of the MCU \r\n");
+#endif
+
+	/* Extract the CRC32 and Packet length send by the Host */
+	Host_CMD_Packet_Len = Host_Buffer[0]+1;
+	Host_CRC32 =  *((uint32_t *)((Host_Buffer + Host_CMD_Packet_Len) - CRC_SIZE_BYTE));
+
+	/*CRC Verification*/
+	CRC_Verify = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0], Host_CMD_Packet_Len - CRC_SIZE_BYTE, Host_CRC32);
+	if(CRC_VERIFICATION_PASSED == CRC_Verify){
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+		BL_print_message("CRC Verification Successful \r\n");
+#endif
+		Bootloader_Send_ACK(1);
+
+		/* Extract the start address from the Host packet */
+		Host_Address = *((uint32_t *)&Host_Buffer[2]);
+		/* Extract the payload length from the Host packet */
+		Pyload_Len = *((uint8_t *)&Host_Buffer[6]);
+
+		Address_Verification = Host_Address_Verification(Host_Address);
+		if(ADDRESS_IS_VALID == Address_Verification)
+		{
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("Address Verification Successful \r\n");
+#endif
+
+
+			Flash_Payload_Write_Status = Flash_Memory_Write_Payload((uint8_t *)&Host_Buffer[7], Host_Address, Pyload_Len);
+			if(FLASH_PAYLOAD_WRITE_PASSED == Flash_Payload_Write_Status)
+			{
+				/* Report Payload Write succeeded */
+				Bootloader_Send_Data_To_Host((uint8_t *)&Flash_Payload_Write_Status,1);
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+				BL_print_message("Payload Success \r\n");
+#endif
+			}
+			else
+			{
+				/* Report Payload Write succeeded */
+				Bootloader_Send_Data_To_Host((uint8_t *)&Flash_Payload_Write_Status,1);
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+				BL_print_message("Payload Faild \r\n");
+#endif
+			}
+		}
+		else
+		{
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_print_message("Address Verification Failed \r\n");
+#endif
+			Bootloader_Send_Data_To_Host((uint8_t *)&Address_Verification,1);
+		}
+
+
+
+	}else{
+		Bootloader_Send_NACK();
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+		BL_print_message("CRC Verification failed \r\n");
+#endif
+	}
 }
 
 /**
@@ -542,12 +643,63 @@ static void Bootloader_Disable_RW_Protection(uint8_t *Host_Buffer){
 
 }
 
+static uint8_t CBL_STM32F401_Get_RDP_Level(void){
+
+}
+
+static uint8_t Flash_Memory_Write_Payload(uint8_t *Host_Payload, uint32_t payload_Start_Address, uint32_t payload_Len){
+	HAL_StatusTypeDef HAL_Status = HAL_ERROR;
+	uint8_t Flash_Payload_Write_Status = FLASH_PAYLOAD_WRITE_FAILED;
+	uint16_t payload_Counter = 0;
+
+	/* Unlock the FLASH Option Control Registers access.*/
+	HAL_Status = HAL_FLASH_Unlock();
+	if(HAL_OK != HAL_Status)
+	{
+		Flash_Payload_Write_Status = FLASH_PAYLOAD_WRITE_FAILED;
+	}
+	else
+	{
+		for(payload_Counter = 0; payload_Counter < payload_Len; payload_Counter++){
+			HAL_Status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, payload_Start_Address + payload_Counter, Host_Payload[payload_Counter]);
+			if(HAL_OK != HAL_Status){
+				Flash_Payload_Write_Status = FLASH_PAYLOAD_WRITE_FAILED;
+				/* Lock the FLASH Option Control Registers access.*/
+				HAL_Status = HAL_FLASH_Lock();
+				break;
+			}else
+			{
+				Flash_Payload_Write_Status = FLASH_PAYLOAD_WRITE_PASSED;
+			}
+		}
+	}
+	if((FLASH_PAYLOAD_WRITE_PASSED == Flash_Payload_Write_Status) && (HAL_OK == HAL_Status))
+	{
+		/* Lock the FLASH Option Control Registers access.*/
+		HAL_Status = HAL_FLASH_Lock();
+		if(HAL_OK != HAL_Status)
+			{
+				Flash_Payload_Write_Status = FLASH_PAYLOAD_WRITE_FAILED;
+			}
+			else
+			{
+				Flash_Payload_Write_Status = FLASH_PAYLOAD_WRITE_PASSED;
+			}
+	}
+	else
+	{
+		Flash_Payload_Write_Status = FLASH_PAYLOAD_WRITE_FAILED;
+	}
+
+	return Flash_Payload_Write_Status;
+}
+
 static uint8_t perform_Flash_Erase(uint8_t sector_Number, uint8_t numberOf_Sectors){
+	HAL_StatusTypeDef HAL_Status = HAL_ERROR;
 	uint8_t Sector_Validity_Status = INVAlID_SECTOR_NUMBER;
 	uint8_t Remaining_Sectors = 0;
 	uint32_t SectorError = 0;
 	FLASH_EraseInitTypeDef pEraseInit;
-	HAL_StatusTypeDef HAL_Status = HAL_ERROR;
 	if(numberOf_Sectors > CBL_FLASH_MAX_SECTOR_NUMBER)
 	{
 		Sector_Validity_Status = INVAlID_SECTOR_NUMBER ;

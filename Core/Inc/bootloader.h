@@ -30,7 +30,7 @@
 
 #define BL_DEBUG_METHOD BL_ENABLE_UART_DEBUG_MESSAGE
 
-#define BL_HOST_BUFFER_RC_LENGTH 200
+#define BL_HOST_BUFFER_RC_LENGTH 256
 
 #define CBL_GET_VER_CMD               0x10
 #define CBL_GET_HELP_CMD              0x11
@@ -69,6 +69,7 @@
 #define STM32F401_FLASH_END		      (FLASH_BASE + STM32F401_FLASH_SIZE)
 #define STM32F401_SRAM1_END		      (SRAM1_BASE + STM32F401_SRAM1_SIZE)
 
+/* CBL_FLASH_ERASE_CMD */
 #define CBL_FLASH_MAX_SECTOR_NUMBER   0x08
 #define CBL_FLASH_MASS_ERASE          0xFF
 
@@ -77,8 +78,12 @@
 #define SECTOR_ERASE_FAILED           0x02
 #define SECTOR_ERASE_SUCCESS          0x03
 
-
 #define FALSH_SUCCESSFUL_ERASE 		  0xFFFFFFFFU
+
+/* CBL_MEM_WRITE_CMD */
+#define FLASH_PAYLOAD_WRITE_FAILED 	  0x00
+#define FLASH_PAYLOAD_WRITE_PASSED    0x01
+
 /*---------------------- Section : Macro Functions Declarations - */
 
 /*---------------------- Section : Data Type Declarations ------- */
