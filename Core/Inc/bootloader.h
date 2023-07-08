@@ -84,6 +84,10 @@
 #define FLASH_PAYLOAD_WRITE_FAILED 	  0x00
 #define FLASH_PAYLOAD_WRITE_PASSED    0x01
 
+/* CBL_GET_RDP_STATUS_CMD */
+#define ROP_LEVEL_READ_INVALID        0x00
+#define ROP_LEVEL_READ_VALID          0x01
+
 /*---------------------- Section : Macro Functions Declarations - */
 
 /*---------------------- Section : Data Type Declarations ------- */

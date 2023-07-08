@@ -374,6 +374,7 @@ static void Bootloader_Read_Protection_Level(uint8_t *Host_Buffer){
 	uint32_t Host_CRC32 = 0;
 	uint8_t CRC_Verify  = 0;
 	uint8_t RDP_level = 0;
+
 #if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
 	BL_print_message("Read the FLASH Read Protection level \r\n");
 #endif
@@ -388,12 +389,12 @@ static void Bootloader_Read_Protection_Level(uint8_t *Host_Buffer){
 #if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
 	BL_print_message("CRC Verification Successful \r\n");
 #endif
-
-		/* Get chip identification number */
-		RDP_level = CBL_STM32F401_Get_RDP_Level();
-		/* Report chip identification number to Host*/
 		Bootloader_Send_ACK(1);
+		/* Get flash protection level */
+		RDP_level = CBL_STM32F401_Get_RDP_Level();
+		/* Report flash protection level to Host*/
 		Bootloader_Send_Data_To_Host((uint8_t *)&RDP_level,1);
+
 	}else{
 		Bootloader_Send_NACK();
 #if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
@@ -644,7 +645,11 @@ static void Bootloader_Disable_RW_Protection(uint8_t *Host_Buffer){
 }
 
 static uint8_t CBL_STM32F401_Get_RDP_Level(void){
+	FLASH_OBProgramInitTypeDef pOBInit;
+	/* Get the Option byte configuration */
+	HAL_FLASHEx_OBGetConfig(&pOBInit);
 
+	return (uint8_t)(pOBInit.RDPLevel);
 }
 
 static uint8_t Flash_Memory_Write_Payload(uint8_t *Host_Payload, uint32_t payload_Start_Address, uint32_t payload_Len){
