@@ -84,9 +84,13 @@
 #define FLASH_PAYLOAD_WRITE_FAILED 	  0x00
 #define FLASH_PAYLOAD_WRITE_PASSED    0x01
 
-/* CBL_GET_RDP_STATUS_CMD */
-#define ROP_LEVEL_READ_INVALID        0x00
-#define ROP_LEVEL_READ_VALID          0x01
+/* CBL_DIS_R_W_PROTECT_CMD */
+#define ROP_LEVEL_CHANGE_INVALID        0x00
+#define ROP_LEVEL_CHANGE_VALID          0x01
+
+#define CBL_ROP_LEVEL_0							0x00
+#define CBL_ROP_LEVEL_1							0x01
+#define CBL_ROP_LEVEL_2							0x02
 
 /*---------------------- Section : Macro Functions Declarations - */
 
